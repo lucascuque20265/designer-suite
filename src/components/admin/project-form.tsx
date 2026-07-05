@@ -161,7 +161,28 @@ export function ProjectForm({
           .select()
           .single();
         if (mErr) throw mErr;
-        uploaded.push(mediaRow as unknown as Media);
+        const newMedia = mediaRow as unknown as Media;
+        uploaded.push(newMedia);
+        // If uploaded video, trigger server-side transcode to optimize size/quality
+        if (type === 'video') {
+          try {
+            // fire-and-forget; server will update media row when done
+            fetch('/api/transcode', {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+                'x-transcode-secret': import.meta.env.VITE_TRANSCODE_SECRET ?? '',
+              },
+              body: JSON.stringify({ storage_path: path, media_id: newMedia.id, target_size: 50 * 1024 * 1024 }),
+            }).then(() => {
+              toast.success('Transcodificação iniciada para ' + file.name);
+            }).catch(() => {
+              toast.error('Falha ao iniciar transcodificação');
+            });
+          } catch {
+            // ignore
+          }
+        }
       }
       setMedia((prev) => [...prev, ...uploaded]);
       if (!coverMediaId && uploaded[0]) setCoverMediaId(uploaded[0].id);
