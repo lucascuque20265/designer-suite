@@ -1,5 +1,6 @@
 // Nitro config: use the Vercel preset so build output is compatible with Vercel
-// Keep minimal — the TanStack/Vite config and Nitro will pick this up during build.
+// scanDirs tells Nitro to scan server/api/** for route handlers
 export default {
   preset: "vercel",
+  scanDirs: ["server"],
 };
