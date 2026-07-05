@@ -49,9 +49,6 @@ function AuthPage() {
         </Link>
         <p className="section-label mt-8">[ Área restrita ]</p>
         <h1 className="font-display text-5xl mt-3">Entrar no painel</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          O cadastro está desativado nesta interface. Crie o usuário pelo painel do Supabase (Authentication → Users → New user) ou me peça para criar via script seguro.
-        </p>
 
         <form onSubmit={onSubmit} className="mt-10 space-y-5">
           <div>
