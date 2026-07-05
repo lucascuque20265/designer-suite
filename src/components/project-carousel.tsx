@@ -101,10 +101,17 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
       if (e.key === "ArrowLeft") mainApi?.scrollPrev();
       if (e.key === "ArrowRight") mainApi?.scrollNext();
       if (e.key === " ") {
+        e.preventDefault();
         const m = media[selected];
         const v = m && videoRefs.current[m.id];
         if (!v) return;
-        if (v.paused) v.play(); else v.pause();
+        if (v.paused) {
+          setPlaying((p) => ({ ...p, [m.id]: true }));
+          v.play().catch(() => setPlaying((p) => ({ ...p, [m.id]: false })));
+        } else {
+          setPlaying((p) => ({ ...p, [m.id]: false }));
+          v.pause();
+        }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -216,13 +223,18 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                               const v = videoRefs.current[m.id];
                               if (!v) return;
                               if (v.paused) {
-                                v.play().catch(() => {});
+                                setPlaying((p) => ({ ...p, [m.id]: true }));
+                                v.play().catch(() => setPlaying((p) => ({ ...p, [m.id]: false })));
                               } else {
+                                setPlaying((p) => ({ ...p, [m.id]: false }));
                                 v.pause();
                               }
                             }}
                             aria-label="Play/Pause"
-                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full bg-black/50 text-white grid place-items-center hover:scale-105 transition-transform"
+                            className={cn(
+                              "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full bg-black/50 text-white grid place-items-center hover:scale-105 transition-transform",
+                              playing[m.id] && !isHovering ? "opacity-0 pointer-events-none scale-90 transition-opacity duration-300" : "opacity-100"
+                            )}
                           >
                             {!playing[m.id] ? (
                               <svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -246,8 +258,13 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                                     e.stopPropagation();
                                     const v = videoRefs.current[m.id];
                                     if (!v) return;
-                                    if (v.paused) v.play().catch(() => {});
-                                    else v.pause();
+                                    if (v.paused) {
+                                      setPlaying((p) => ({ ...p, [m.id]: true }));
+                                      v.play().catch(() => setPlaying((p) => ({ ...p, [m.id]: false })));
+                                    } else {
+                                      setPlaying((p) => ({ ...p, [m.id]: false }));
+                                      v.pause();
+                                    }
                                   }}
                                   className="h-9 w-9 grid place-items-center rounded-full bg-black/40 text-white"
                                 >
