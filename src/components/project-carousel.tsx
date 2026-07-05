@@ -12,25 +12,32 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
   });
   const [selected, setSelected] = useState(0);
   const [muted, setMuted] = useState(true);
+  const [volume, setVolume] = useState(1);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [playing, setPlaying] = useState<Record<string, boolean>>({});
   const [isHovering, setIsHovering] = useState(false);
+  const [thumbsHover, setThumbsHover] = useState(false);
+  const [aspects, setAspects] = useState<Record<string, string>>({});
+  const [durations, setDurations] = useState<Record<string, number>>({});
+  const [progress, setProgress] = useState<Record<string, number>>({});
   const autoplayRef = useRef<number | null>(null);
   const AUTOPLAY_MS = 4500;
+  const THUMBS_AUTOPLAY_MS = 3500;
 
   const onSelect = useCallback(() => {
     if (!mainApi) return;
     const idx = mainApi.selectedScrollSnap();
     setSelected(idx);
     thumbsApi?.scrollTo(idx);
-    // Manage video play/pause when selecting slides
+
     try {
       const id = media[idx]?.id;
       media.forEach((m) => {
         const v = videoRefs.current[m.id];
         if (!v) return;
         if (m.id === id && m.type === "video") {
-          // try play (may fail if unmuted)
+          v.muted = muted;
+          v.volume = volume;
           v.play().then(() => setPlaying((p) => ({ ...p, [m.id]: true }))).catch(() => {});
         } else {
           v.pause();
@@ -40,7 +47,7 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
     } catch (e) {
       // ignore
     }
-  }, [mainApi, thumbsApi]);
+  }, [mainApi, thumbsApi, media, muted, volume]);
 
   useEffect(() => {
     if (!mainApi) return;
@@ -49,10 +56,9 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
     mainApi.on("reInit", onSelect);
   }, [mainApi, onSelect]);
 
-  // autoplay for images: advance slides automatically when not hovering and when current slide is not a playing video
+  // autoplay for main slides (images only — pause if hovering or video is playing)
   useEffect(() => {
     if (!mainApi || media.length <= 1) return;
-    // clear any existing
     if (autoplayRef.current) {
       window.clearInterval(autoplayRef.current);
       autoplayRef.current = null;
@@ -76,14 +82,34 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
     };
   }, [mainApi, media, selected, isHovering, playing]);
 
+  // autoplay for thumbnails carousel (smooth scrolling)
+  useEffect(() => {
+    if (!thumbsApi || media.length <= 1) return;
+    const id = window.setInterval(() => {
+      if (thumbsHover) return;
+      try {
+        thumbsApi.scrollNext();
+      } catch (e) {
+        // ignore
+      }
+    }, THUMBS_AUTOPLAY_MS);
+    return () => window.clearInterval(id);
+  }, [thumbsApi, thumbsHover, media.length]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") mainApi?.scrollPrev();
       if (e.key === "ArrowRight") mainApi?.scrollNext();
+      if (e.key === " ") {
+        const m = media[selected];
+        const v = m && videoRefs.current[m.id];
+        if (!v) return;
+        if (v.paused) v.play(); else v.pause();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mainApi]);
+  }, [mainApi, media, selected]);
 
   if (!media.length) {
     return (
@@ -92,6 +118,16 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
       </div>
     );
   }
+
+  const handleSeek = (e: any, id: string) => {
+    e.stopPropagation();
+    const duration = durations[id] ?? 0;
+    if (!duration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.min(Math.max(0, (e.clientX - rect.left) / rect.width), 1);
+    const v = videoRefs.current[id];
+    if (v) v.currentTime = pct * duration;
+  };
 
   return (
     <div className="space-y-4">
@@ -104,13 +140,25 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
           <div className="flex">
             {media.map((m, i) => (
               <div key={m.id} className="flex-[0_0_100%] min-w-0 relative">
-                <div className="aspect-[16/10] md:aspect-[16/9] bg-black flex items-center justify-center overflow-hidden relative">
-                    {m.type === "image" ? (
+                <div
+                  style={{ aspectRatio: aspects[m.id] ?? "16/10", maxHeight: "75vh" }}
+                  className="bg-black flex items-center justify-center overflow-hidden relative"
+                >
+                  {m.type === "image" ? (
                     <img
                       src={m.url}
                       alt={`Slide ${i + 1}`}
                       loading={i === 0 ? "eager" : "lazy"}
-                      className={`h-full w-full object-cover transition-transform duration-700 ${i === selected ? 'scale-105' : 'scale-100'}`}
+                      onLoad={(e) => {
+                        const img = e.currentTarget as HTMLImageElement;
+                        if (img.naturalWidth && img.naturalHeight) {
+                          setAspects((p) => ({ ...p, [m.id]: `${img.naturalWidth}/${img.naturalHeight}` }));
+                        }
+                      }}
+                      className={cn(
+                        "h-full w-full object-cover transition-transform duration-700",
+                        i === selected ? "scale-105" : "scale-100"
+                      )}
                     />
                   ) : (
                     <>
@@ -123,8 +171,25 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                         playsInline
                         controls={false}
                         preload="metadata"
+                        onLoadedMetadata={(e) => {
+                          const v = e.currentTarget as HTMLVideoElement;
+                          if (v.videoWidth && v.videoHeight) {
+                            setAspects((p) => ({ ...p, [m.id]: `${v.videoWidth}/${v.videoHeight}` }));
+                          }
+                          setDurations((p) => ({ ...p, [m.id]: v.duration }));
+                          v.volume = volume;
+                          v.muted = muted;
+                        }}
+                        onTimeUpdate={(e) => {
+                          const v = e.currentTarget as HTMLVideoElement;
+                          setProgress((p) => ({ ...p, [m.id]: v.currentTime }));
+                        }}
+                        onPlay={() => setPlaying((p) => ({ ...p, [m.id]: true }))}
+                        onPause={() => setPlaying((p) => ({ ...p, [m.id]: false }))}
                         className="h-full w-full object-cover"
                       />
+
+                      {/* central play/pause */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -132,14 +197,13 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                           const v = videoRefs.current[m.id];
                           if (!v) return;
                           if (v.paused) {
-                            v.play().then(() => setPlaying((p) => ({ ...p, [m.id]: true }))).catch(() => {});
+                            v.play().catch(() => {});
                           } else {
                             v.pause();
-                            setPlaying((p) => ({ ...p, [m.id]: false }));
                           }
                         }}
                         aria-label="Play/Pause"
-                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-14 w-14 rounded-full bg-black/50 text-white grid place-items-center hover:scale-105 transition-transform"
+                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full bg-black/50 text-white grid place-items-center hover:scale-105 transition-transform"
                       >
                         {!playing[m.id] ? (
                           <svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -152,6 +216,85 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                           </svg>
                         )}
                       </button>
+
+                      {/* controls for selected video */}
+                      {i === selected && (
+                        <div className="absolute left-4 right-4 bottom-4 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const v = videoRefs.current[m.id];
+                                if (!v) return;
+                                if (v.paused) v.play().catch(() => {});
+                                else v.pause();
+                              }}
+                              className="h-9 w-9 grid place-items-center rounded-full bg-black/40 text-white"
+                            >
+                              {!playing[m.id] ? (
+                                <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <path d="M1 1 L13 8 L1 15 V1 Z" fill="currentColor" />
+                                </svg>
+                              ) : (
+                                <svg width="10" height="12" viewBox="0 0 10 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                  <rect x="0" y="0" width="3" height="12" fill="currentColor" />
+                                  <rect x="7" y="0" width="3" height="12" fill="currentColor" />
+                                </svg>
+                              )}
+                            </button>
+
+                            <div
+                              onClick={(e) => handleSeek(e, m.id)}
+                              className="h-2 w-72 bg-white/20 rounded cursor-pointer overflow-hidden"
+                            >
+                              <div
+                                style={{ width: `${((progress[m.id] ?? 0) / (durations[m.id] || 1)) * 100}%` }}
+                                className="h-full bg-primary rounded"
+                              />
+                            </div>
+                            <div className="text-xs text-white font-mono">
+                              {String(Math.floor((progress[m.id] ?? 0) / 60)).padStart(2, "0")}:{String(Math.floor((progress[m.id] ?? 0) % 60)).padStart(2, "0")}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              aria-label={muted ? "Ativar som" : "Silenciar"}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMuted((v) => {
+                                  const next = !v;
+                                  const vEl = videoRefs.current[media[selected]?.id];
+                                  if (vEl) vEl.muted = next;
+                                  return next;
+                                });
+                              }}
+                              className="h-9 w-9 grid place-items-center rounded-full bg-white/10 shadow-md border border-border/40 hover:bg-primary hover:text-primary-foreground transition-colors"
+                            >
+                              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                            </button>
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={Math.round((volume ?? 1) * 100)}
+                              onChange={(e) => {
+                                const v = Number(e.target.value) / 100;
+                                setVolume(v);
+                                const vEl = videoRefs.current[media[selected]?.id];
+                                if (vEl) {
+                                  vEl.volume = v;
+                                  vEl.muted = v === 0;
+                                  setMuted(v === 0);
+                                }
+                              }}
+                              className="w-24"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
 
@@ -185,16 +328,6 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
         </button>
 
         <div className="absolute top-4 right-4 flex items-center gap-2">
-          {media[selected]?.type === "video" && (
-            <button
-              type="button"
-              aria-label={muted ? "Ativar som" : "Silenciar"}
-              onClick={() => setMuted((v) => !v)}
-              className="h-10 w-10 grid place-items-center rounded-full bg-white/10 shadow-md border border-border/40 hover:bg-primary hover:text-primary-foreground transition-colors"
-            >
-              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-            </button>
-          )}
           <div className="font-mono text-xs px-3 h-10 grid place-items-center rounded-full bg-white/10 shadow-md border border-border/40">
             {String(selected + 1).padStart(2, "0")} / {String(media.length).padStart(2, "0")}
           </div>
@@ -210,14 +343,19 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
             onClick={() => mainApi?.scrollTo(i)}
             className={cn(
               "h-2 rounded-full transition-all",
-                i === selected ? "w-8 bg-primary shadow-md" : "w-2 bg-border/60 hover:bg-border"
+              i === selected ? "w-8 bg-primary shadow-md" : "w-2 bg-border/60 hover:bg-border"
             )}
           />
         ))}
       </div>
 
       {media.length > 1 && (
-        <div ref={thumbsRef} className="overflow-hidden">
+        <div
+          ref={thumbsRef}
+          className="overflow-hidden"
+          onMouseEnter={() => setThumbsHover(true)}
+          onMouseLeave={() => setThumbsHover(false)}
+        >
           <div className="flex gap-3 px-1">
             {media.map((m, i) => (
               <button
@@ -230,10 +368,10 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                 )}
               >
                 {m.type === "image" ? (
-                  <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover auto-zoom" />
                 ) : (
                   <>
-                    <video src={m.url} muted playsInline className="h-full w-full object-cover" />
+                    <video src={m.url} muted playsInline autoPlay loop className="h-full w-full object-cover" />
                     <div className="absolute right-2 top-2 bg-black/50 rounded px-1 py-0.5 text-xs text-white">Vid</div>
                   </>
                 )}

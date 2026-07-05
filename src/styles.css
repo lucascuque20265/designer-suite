@@ -149,3 +149,15 @@
     transform: translateY(-4px);
   }
 }
+
+/* Auto-zoom animation for thumbnails and image previews */
+@keyframes autoZoom {
+  0% { transform: scale(1) translateZ(0); }
+  50% { transform: scale(1.06) translateZ(0); }
+  100% { transform: scale(1) translateZ(0); }
+}
+.auto-zoom {
+  animation: autoZoom 10s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}

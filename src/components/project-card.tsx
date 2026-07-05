@@ -35,7 +35,7 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
                 src={cover}
                 alt={project.title}
                 loading="lazy"
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 auto-zoom"
               />
             )
           ) : (
