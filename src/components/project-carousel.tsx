@@ -149,6 +149,43 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
     if (v) v.currentTime = pct * duration;
   };
 
+  // swipe/drag seeking helpers
+  const seekingRef = useRef<{ id?: string; active: boolean }>({ active: false });
+
+  const updateSeekFromEvent = (clientX: number, id: string) => {
+    const el = document.getElementById(`progress-${id}`);
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const pct = Math.min(Math.max(0, (clientX - rect.left) / rect.width), 1);
+    const dur = durations[id] ?? 0;
+    const v = videoRefs.current[id];
+    if (v && dur) v.currentTime = pct * dur;
+    setProgress((p) => ({ ...p, [id]: pct * dur }));
+  };
+
+  const onPointerDownSeek = (e: any, id: string) => {
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch {}
+    seekingRef.current = { id, active: true };
+    const clientX = e.clientX ?? (e.touches && e.touches[0] && e.touches[0].clientX);
+    if (clientX) updateSeekFromEvent(clientX, id);
+  };
+
+  const onPointerMoveSeek = (e: any, id: string) => {
+    if (!seekingRef.current.active || seekingRef.current.id !== id) return;
+    const clientX = e.clientX ?? (e.touches && e.touches[0] && e.touches[0].clientX);
+    if (clientX) updateSeekFromEvent(clientX, id);
+  };
+
+  const onPointerUpSeek = (e: any, id: string) => {
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    } catch {}
+    seekingRef.current = { id: undefined, active: false };
+  };
+
   return (
     <div className="space-y-4">
       <div
@@ -161,31 +198,8 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
             {media.map((m, i) => (
               <div key={m.id} className="flex-[0_0_100%] min-w-0 relative">
                 <div className="bg-black relative overflow-hidden" style={{ maxHeight: "75vh" }}>
-                  {/* background fill (blurred) */}
-                  {m.type === "image" ? (
-                    <div
-                      aria-hidden
-                      style={{ backgroundImage: `url(${m.url})` }}
-                      className="absolute inset-0 bg-center bg-cover filter blur-2xl scale-110"
-                    />
-                  ) : (
-                    <video
-                      aria-hidden
-                      src={m.url}
-                      muted
-                      autoPlay
-                      loop
-                      playsInline
-                      className="absolute inset-0 h-full w-full object-cover filter blur-2xl scale-110"
-                    />
-                  )}
-
-                  {/* dark overlay to reduce contrast behind foreground */}
-                  <div className="absolute inset-0 bg-black/60" />
-
-                  {/* foreground centered media */}
                   <div className="relative z-10 grid place-items-center h-full">
-                    <div style={{ aspectRatio: aspects[m.id] ?? "16/10", maxHeight: "75vh", width: "min(60vw, 980px)" }} className="overflow-hidden">
+                    <div style={{ aspectRatio: aspects[m.id] ?? "16/10", maxHeight: "75vh", width: "min(100%, 980px)" }} className="overflow-hidden">
                       {m.type === "image" ? (
                         <img
                           src={m.url}
@@ -227,8 +241,6 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                             onPause={() => setPlaying((p) => ({ ...p, [m.id]: false }))}
                             className="h-full w-full object-contain"
                           />
-
-                          {/* central play/pause */}
                           <button
                             type="button"
                             onClick={(e) => {
@@ -268,8 +280,8 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
 
                           {/* controls for selected video (desktop & mobile) */}
                           {i === selected && (
-                            isTouch ? (
-                              <div className="absolute left-3 right-3 bottom-3 flex items-center gap-3 justify-between p-3 bg-black/40 rounded-md z-20">
+                              isTouch ? (
+                              <div className="mt-3 px-3 flex items-center gap-3 justify-between p-3 bg-black/40 rounded-md z-20">
                                 <div className="flex items-center gap-3 w-full">
                                   <button
                                     type="button"
@@ -332,7 +344,7 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                                 </button>
                               </div>
                             ) : (
-                              <div className="absolute left-4 right-4 bottom-4 flex items-center justify-between gap-3">
+                              <div className="mt-3 px-4 flex items-center justify-between gap-3">
                                 <div className="flex items-center gap-3">
                                   <button
                                     type="button"

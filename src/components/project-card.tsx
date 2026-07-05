@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import type { Project } from "@/lib/portfolio";
 import useEmblaCarousel from "embla-carousel-react";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function ProjectCard({ project, index }: { project: Project; index: number }) {
   const cover = project.cover_url;
@@ -11,8 +11,34 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
 
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, draggable: false, containScroll: "keepSnaps" });
 
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const [previewPlaying, setPreviewPlaying] = useState(false);
+
+  const handlePreviewToggle = (e: any) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const idx = emblaApi?.selectedScrollSnap?.() ?? 0;
+    const m = medias[idx] ?? medias[0];
+    let v: HTMLVideoElement | null | undefined;
+    if (m) {
+      v = videoRefs.current[m.id];
+    } else if (cover && isVideo) {
+      v = videoRefs.current[cover as any];
+    }
+    if (!v) return;
+    if (!v) return;
+    if (v.paused) {
+      try { v.muted = false; } catch (err) {}
+      v.play().catch(() => {});
+      setPreviewPlaying(true);
+    } else {
+      v.pause();
+      setPreviewPlaying(false);
+    }
+  };
+
   useEffect(() => {
-    if (!emblaApi || medias.length <= 1) return;
+    if (!emblaApi || medias.length <= 1 || previewPlaying) return;
     const id = window.setInterval(() => {
       try {
         emblaApi.scrollNext();
@@ -21,7 +47,7 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
       }
     }, 2800);
     return () => window.clearInterval(id);
-  }, [emblaApi, medias.length]);
+  }, [emblaApi, medias.length, previewPlaying]);
 
   return (
     <motion.div
@@ -48,13 +74,14 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
               </span>
             </div>
           </div>
-          {medias.length > 1 ? (
+                {medias.length > 1 ? (
             <div ref={emblaRef} className="absolute inset-0 overflow-hidden">
               <div className="flex h-full">
                 {medias.map((m) => (
                   <div key={m.id} className="min-w-full h-full relative">
                     {m.type === "video" ? (
                       <video
+                        ref={(el) => (videoRefs.current[m.id] = el)}
                         src={m.url}
                         muted
                         loop
@@ -79,6 +106,7 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
             cover ? (
               isVideo ? (
                 <video
+                  ref={(el) => { if (cover) videoRefs.current[cover] = el; }}
                   src={cover}
                   muted
                   loop
@@ -100,6 +128,21 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
                 <span className="font-mono text-xs">sem capa</span>
               </div>
             )
+          )}
+
+          {/* Play preview overlay (tap to play) */}
+          {(medias.concat(cover ? [{ id: 'cover', type: isVideo ? 'video' : 'image', url: cover } as any] : []))
+            .some((m) => m && m.type === 'video') && (
+            <button
+              type="button"
+              onClick={handlePreviewToggle}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 h-12 w-12 rounded-full bg-black/60 text-white grid place-items-center hover:scale-105 transition-transform pointer-events-auto"
+              aria-label="Play preview"
+            >
+              <svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2 1.5L16 10L2 18.5V1.5Z" fill="currentColor" />
+              </svg>
+            </button>
           )}
 
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
