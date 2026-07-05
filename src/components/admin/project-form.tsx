@@ -76,6 +76,19 @@ export function ProjectForm({
 
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
 
+  const { data: remoteMedia } = useQuery({
+    queryKey: ["project-media", projectId],
+    queryFn: async () => {
+      if (!projectId) return [] as Media[];
+      const res = await fetch(`/api/media?project_id=${projectId}`);
+      if (!res.ok) throw new Error('Falha ao buscar mídias');
+      const json = await res.json();
+      return (json.data ?? []) as Media[];
+    },
+    refetchInterval: 5000,
+    enabled: !!projectId,
+  });
+
   function setField<K extends keyof ProjectFormValues>(key: K, v: ProjectFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: v }));
   }
@@ -197,9 +210,10 @@ export function ProjectForm({
 
   // Sync server-side media updates (only update URL/storage_path/transcode_status)
   useEffect(() => {
+    if (!remoteMedia) return;
     setMedia((prev) => {
       const prevMap = new Map(prev.map((m) => [m.id, m]));
-      const merged = initialMedia.map((sm) => {
+      const merged = (remoteMedia ?? []).map((sm) => {
         const existing = prevMap.get(sm.id);
         if (existing) {
           return {
@@ -207,15 +221,17 @@ export function ProjectForm({
             url: sm.url ?? existing.url,
             storage_path: sm.storage_path ?? existing.storage_path,
             transcode_status: sm.transcode_status ?? existing.transcode_status,
+            position: sm.position ?? existing.position,
+            is_cover: sm.is_cover ?? existing.is_cover,
           };
         }
         return sm;
       });
       // Keep any local-only items (e.g., not yet persisted)
-      const localOnly = prev.filter((p) => !initialMedia.find((s) => s.id === p.id));
+      const localOnly = prev.filter((p) => !(remoteMedia ?? []).find((s) => s.id === p.id));
       return [...merged, ...localOnly];
     });
-  }, [initialMedia]);
+  }, [remoteMedia]);
 
   async function compressImageFile(file: File, maxDim = MAX_IMAGE_DIMENSION, quality = DEFAULT_IMAGE_QUALITY): Promise<Blob> {
     if (!file.type.startsWith("image/")) throw new Error("Not an image");

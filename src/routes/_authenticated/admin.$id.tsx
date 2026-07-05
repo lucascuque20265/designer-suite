@@ -17,17 +17,12 @@ function EditarProjeto() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projects")
-        .select("*, category:categories(*), media(*)")
+        .select("*, category:categories(*)")
         .eq("id", id)
         .single();
       if (error) throw error;
-      const p = data as unknown as ProjectWithMedia;
-      p.media = (p.media ?? []).sort((a, b) => a.position - b.position);
-      return p;
+      return data as unknown as ProjectWithMedia;
     },
-    // Poll every 5s to pick up updated media statuses (transcode progress)
-    refetchInterval: 5000,
-    refetchIntervalInBackground: true,
   });
 
   return (
