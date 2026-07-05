@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -194,6 +194,28 @@ export function ProjectForm({
       setUploading(false);
     }
   }
+
+  // Sync server-side media updates (only update URL/storage_path/transcode_status)
+  useEffect(() => {
+    setMedia((prev) => {
+      const prevMap = new Map(prev.map((m) => [m.id, m]));
+      const merged = initialMedia.map((sm) => {
+        const existing = prevMap.get(sm.id);
+        if (existing) {
+          return {
+            ...existing,
+            url: sm.url ?? existing.url,
+            storage_path: sm.storage_path ?? existing.storage_path,
+            transcode_status: sm.transcode_status ?? existing.transcode_status,
+          };
+        }
+        return sm;
+      });
+      // Keep any local-only items (e.g., not yet persisted)
+      const localOnly = prev.filter((p) => !initialMedia.find((s) => s.id === p.id));
+      return [...merged, ...localOnly];
+    });
+  }, [initialMedia]);
 
   async function compressImageFile(file: File, maxDim = MAX_IMAGE_DIMENSION, quality = DEFAULT_IMAGE_QUALITY): Promise<Blob> {
     if (!file.type.startsWith("image/")) throw new Error("Not an image");

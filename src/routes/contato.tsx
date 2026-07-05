@@ -12,7 +12,7 @@ import { Mail, MessageCircle, Instagram, Linkedin } from "lucide-react";
 export const Route = createFileRoute("/contato")({
   head: () => ({
     meta: [
-      { title: "Contato — Lucas Miranda | Anima Estudio" },
+      { title: "Contato" },
       { name: "description", content: "Fale com Lucas Miranda para orçamentos, colaborações e projetos de design gráfico." },
       { property: "og:title", content: "Contato — Lucas Miranda" },
       { property: "og:description", content: "Formulário direto, WhatsApp e e-mail para começar seu projeto." },
@@ -57,7 +57,7 @@ function Contato() {
             algo <span className="text-primary">memorável</span>.
           </h1>
           <p className="mt-6 text-lg text-muted-foreground max-w-xl">
-            Envie uma mensagem contando sobre o projeto, respondo em até 1 dia útil.
+            Envie uma mensagem contando sobre o projeto, respondo em até 2 dias úteis.
           </p>
 
           <form onSubmit={onSubmit} className="mt-10 space-y-5 max-w-xl">
@@ -92,7 +92,7 @@ function Contato() {
             </li>
             <li>
               <a href={SITE.instagramUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 text-lg hover:text-primary transition-colors">
-                <Instagram className="h-4 w-4" /> @animaestudio
+                <Instagram className="h-4 w-4" /> @lucamirandabr
               </a>
             </li>
             <li>

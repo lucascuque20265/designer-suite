@@ -25,6 +25,9 @@ function EditarProjeto() {
       p.media = (p.media ?? []).sort((a, b) => a.position - b.position);
       return p;
     },
+    // Poll every 5s to pick up updated media statuses (transcode progress)
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
   });
 
   return (
