@@ -18,7 +18,8 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  // Only signin allowed in admin UI — signups are disabled here
+  const mode: "signin" = "signin";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,21 +28,11 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success("Bem-vindo de volta!");
-        navigate({ to: "/admin" });
-      } else {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/admin` },
-        });
-        if (error) throw error;
-        toast.success("Conta criada. Se pedir confirmação por e-mail, verifique sua caixa.");
-        navigate({ to: "/admin" });
-      }
+      // signin only
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      toast.success("Bem-vindo de volta!");
+      navigate({ to: "/admin" });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
       toast.error(msg);
@@ -57,11 +48,9 @@ function AuthPage() {
           ← Voltar ao site
         </Link>
         <p className="section-label mt-8">[ Área restrita ]</p>
-        <h1 className="font-display text-5xl mt-3">
-          {mode === "signin" ? "Entrar no painel" : "Criar conta"}
-        </h1>
+        <h1 className="font-display text-5xl mt-3">Entrar no painel</h1>
         <p className="mt-3 text-sm text-muted-foreground">
-          O primeiro usuário cadastrado assume o papel de administrador.
+          O cadastro está desativado nesta interface. Crie o usuário pelo painel do Supabase (Authentication → Users → New user) ou me peça para criar via script seguro.
         </p>
 
         <form onSubmit={onSubmit} className="mt-10 space-y-5">
@@ -95,15 +84,7 @@ function AuthPage() {
           </Button>
         </form>
 
-        <button
-          type="button"
-          onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="mt-6 text-sm text-muted-foreground hover:text-foreground"
-        >
-          {mode === "signin"
-            ? "Ainda não tem conta? Cadastre-se"
-            : "Já tem conta? Entrar"}
-        </button>
+        {/* Sign-up disabled in admin UI */}
       </div>
     </div>
   );
