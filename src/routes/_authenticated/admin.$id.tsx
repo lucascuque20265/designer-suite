@@ -17,7 +17,7 @@ function EditarProjeto() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projects")
-        .select("*, category:categories(*)")
+        .select("*, category:categories(*), media(*)")
         .eq("id", id)
         .single();
       if (error) throw error;

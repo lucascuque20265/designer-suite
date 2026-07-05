@@ -266,12 +266,31 @@ export function ProjectForm({
 
   async function removeMedia(m: Media) {
     if (!confirm("Remover este slide?")) return;
-    if (m.storage_path) {
-      await supabase.storage.from("portfolio-media").remove([m.storage_path]);
+    try {
+      // Delete DB record first to respect RLS/permission checks
+      const { error: delErr } = await supabase.from("media").delete().eq("id", m.id);
+      if (delErr) throw delErr;
+
+      // Then remove file from storage if available
+      if (m.storage_path) {
+        const { error: storageErr } = await supabase.storage.from("portfolio-media").remove([m.storage_path]);
+        if (storageErr) {
+          // Log and show a warning — DB record already removed, but file may remain in storage
+          // eslint-disable-next-line no-console
+          console.warn("Falha ao remover arquivo do storage:", storageErr);
+          toast.error("Mídia removida do projeto, porém falha ao remover arquivo do storage.");
+        }
+      }
+
+      setMedia((prev) => prev.filter((x) => x.id !== m.id));
+      if (coverMediaId === m.id) setCoverMediaId(null);
+      toast.success("Slide removido.");
+    } catch (e) {
+      const err = e as any;
+      // eslint-disable-next-line no-console
+      console.error("Erro ao remover mídia:", err);
+      toast.error(err?.message ?? "Erro ao remover mídia");
     }
-    await supabase.from("media").delete().eq("id", m.id);
-    setMedia((prev) => prev.filter((x) => x.id !== m.id));
-    if (coverMediaId === m.id) setCoverMediaId(null);
   }
 
   const sensors = useSensors(
