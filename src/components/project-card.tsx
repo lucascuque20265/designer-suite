@@ -37,7 +37,7 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
       >
         <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-surface">
           {/* CTA overlay: instrução para abrir detalhes */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
             <div className="transition-opacity duration-300 opacity-100 group-hover:opacity-0">
               <span className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1 rounded-full font-mono text-sm shadow-lg cta-pulse">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
