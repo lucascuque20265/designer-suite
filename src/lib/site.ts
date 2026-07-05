@@ -3,10 +3,10 @@ export const SITE = {
   name: "Lucas Miranda — Anima Estudio",
   shortName: "Lucas Miranda",
   tagline: "Design gráfico sênior com pegada editorial e ousadia visual.",
-  email: "contato@animaestudio.com",
-  whatsappNumber: "5511999999999", // apenas dígitos, formato internacional
-  whatsappUrl: "https://wa.me/5511999999999",
-  instagramUrl: "https://instagram.com/animaestudio",
+  email: "lucamirandabr1@gmail.com",
+  whatsappNumber: "5511997697830", // apenas dígitos, formato internacional
+  whatsappUrl: "https://wa.me/5511997697830",
+  instagramUrl: "https://www.instagram.com/lucamirandabr/",
   behanceUrl: "https://behance.net/animaestudio",
-  linkedinUrl: "https://linkedin.com/in/lucas-miranda",
+  linkedinUrl: "https://www.linkedin.com/in/animaestudio/",
 } as const;
