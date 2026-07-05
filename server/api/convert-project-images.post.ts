@@ -1,7 +1,7 @@
 import { defineEventHandler, readBody, createError } from 'h3';
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event) as Record<string, any>;
+  const body = await readBody(event) as Record<string, unknown>;
   const projectId = body?.project_id as string | undefined;
   const slug = body?.slug as string | undefined;
   const removeOriginal = !!body?.remove_original;
@@ -16,8 +16,11 @@ export default defineEventHandler(async (event) => {
       if (!slug) throw createError({ statusCode: 400, statusMessage: 'project_id or slug required' });
       const { data: pData, error: pErr } = await supabaseAdmin.from('projects').select('id').eq('slug', slug).limit(1);
       if (pErr) throw pErr;
-      if (!pData || (pData as any[]).length === 0) throw createError({ statusCode: 404, statusMessage: `Project not found: ${slug}` });
-      pid = (pData as any[])[0].id;
+      const rows = pData as { id: string }[] | null;
+      if (!rows || rows.length === 0) throw createError({ statusCode: 404, statusMessage: `Project not found: ${slug}` });
+      pid = rows[0].id;
+    }
+
     const { data: medias, error: mErr } = await supabaseAdmin
       .from('media')
       .select('id,storage_path,url,type')
@@ -42,16 +45,17 @@ export default defineEventHandler(async (event) => {
 
         // download.data is a Blob in the browser-like environment; convert to Buffer
         const blob = download.data as Blob;
-        const arrayBuffer = await (blob as any).arrayBuffer();
-        const inputBuf = Buffer.from(arrayBuffer as ArrayBuffer);
+        const arrayBuffer = await (blob as Blob & { arrayBuffer(): Promise<ArrayBuffer> }).arrayBuffer();
+        const inputBuf = Buffer.from(arrayBuffer);
         const inputSize = inputBuf.length;
 
         // dynamic import sharp so build doesn't fail if not installed locally
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let sharp: any;
         try {
           const sharpMod = await import('sharp');
           sharp = sharpMod.default || sharpMod;
-        } catch (e) {
+        } catch {
           results.push({ id: m.id, status: 'error', error: 'sharp not installed on server runtime' });
           continue;
         }
@@ -82,20 +86,22 @@ export default defineEventHandler(async (event) => {
               results.push({ id: m.id, status: 'done', inputSize, newSize, newPath, newUrl: pub.publicUrl, removeOriginal: false, warning: delErr.message });
               continue;
             }
-          } catch (err) {
-            results.push({ id: m.id, status: 'done', inputSize, newSize, newPath, newUrl: pub.publicUrl, removeOriginal: false, warning: String(err) });
+          } catch (delEx) {
+            results.push({ id: m.id, status: 'done', inputSize, newSize, newPath, newUrl: pub.publicUrl, removeOriginal: false, warning: String(delEx) });
             continue;
           }
         }
 
         results.push({ id: m.id, status: 'done', inputSize, newSize, newPath, newUrl: pub.publicUrl });
-      } catch (err: any) {
-        results.push({ id: m.id, status: 'error', error: err?.message ?? String(err) });
+      } catch (itemErr) {
+        const msg = itemErr instanceof Error ? itemErr.message : String(itemErr);
+        results.push({ id: m.id, status: 'error', error: msg });
       }
     }
 
     return { ok: true, project_id: pid, processed: results.length, details: results };
-  } catch (err: any) {
-    throw createError({ statusCode: 500, statusMessage: err?.message ?? String(err) });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw createError({ statusCode: 500, statusMessage: msg });
   }
 });
