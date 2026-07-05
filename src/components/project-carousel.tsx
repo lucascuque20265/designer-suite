@@ -13,6 +13,7 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
   const [selected, setSelected] = useState(0);
   const [muted, setMuted] = useState(true);
   const [volume, setVolume] = useState(1);
+  const [isTouch, setIsTouch] = useState(false);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [playing, setPlaying] = useState<Record<string, boolean>>({});
   const [isHovering, setIsHovering] = useState(false);
@@ -106,6 +107,11 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
         const v = m && videoRefs.current[m.id];
         if (!v) return;
         if (v.paused) {
+          // user gesture -> unmute if needed and play
+          if (muted) {
+            setMuted(false);
+            try { v.muted = false; } catch (e) {}
+          }
           setPlaying((p) => ({ ...p, [m.id]: true }));
           v.play().catch(() => setPlaying((p) => ({ ...p, [m.id]: false })));
         } else {
@@ -117,6 +123,13 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [mainApi, media, selected]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const touch = ("ontouchstart" in window) || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0);
+      setIsTouch(Boolean(touch));
+    }
+  }, []);
 
   if (!media.length) {
     return (
@@ -191,11 +204,11 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                           <video
                             ref={(el) => (videoRefs.current[m.id] = el)}
                             src={m.url}
-                            autoPlay={i === selected}
+                            autoPlay={i === selected && !isTouch}
                             loop
-                            muted={muted}
+                            muted={isTouch ? false : muted}
                             playsInline
-                            controls={false}
+                            controls={isTouch}
                             preload="metadata"
                             onLoadedMetadata={(e) => {
                               const v = e.currentTarget as HTMLVideoElement;
@@ -204,7 +217,7 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                               }
                               setDurations((p) => ({ ...p, [m.id]: v.duration }));
                               v.volume = volume;
-                              v.muted = muted;
+                              v.muted = isTouch ? false : muted;
                             }}
                             onTimeUpdate={(e) => {
                               const v = e.currentTarget as HTMLVideoElement;
@@ -223,6 +236,11 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                               const v = videoRefs.current[m.id];
                               if (!v) return;
                               if (v.paused) {
+                                // on user gesture, unmute if currently muted so audio can play on mobile
+                                if (muted) {
+                                  setMuted(false);
+                                  try { v.muted = false; } catch (e) {}
+                                }
                                 setPlaying((p) => ({ ...p, [m.id]: true }));
                                 v.play().catch(() => setPlaying((p) => ({ ...p, [m.id]: false })));
                               } else {
@@ -259,6 +277,10 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                                     const v = videoRefs.current[m.id];
                                     if (!v) return;
                                     if (v.paused) {
+                                      if (muted) {
+                                        setMuted(false);
+                                        try { v.muted = false; } catch (e) {}
+                                      }
                                       setPlaying((p) => ({ ...p, [m.id]: true }));
                                       v.play().catch(() => setPlaying((p) => ({ ...p, [m.id]: false })));
                                     } else {
@@ -337,7 +359,6 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                       {/* bottom gradient + caption */}
                       <div className="absolute left-0 right-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
                       <div className="absolute left-4 bottom-4 text-sm text-white flex items-center gap-3">
-                        <div className="px-2 py-1 rounded bg-black/40 text-xs uppercase tracking-wider">{m.type}</div>
                         <div className="text-xs font-medium">Slide {i + 1} de {media.length}</div>
                       </div>
                     </div>
@@ -410,7 +431,6 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
                 ) : (
                   <>
                     <video src={m.url} muted playsInline autoPlay loop className="h-full w-full object-cover" />
-                    <div className="absolute right-2 top-2 bg-black/50 rounded px-1 py-0.5 text-xs text-white">Vid</div>
                   </>
                 )}
               </button>
