@@ -5,7 +5,11 @@ on:
     # Daily at 08:00 AM America/Sao_Paulo (UTC-3).
     # GitHub Actions cron uses UTC, so this is scheduled for 11:00 UTC.
     - cron: '0 11 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: 'Optional site URL to ping (overrides secret)'
+        required: false
 
 jobs:
   ping:
@@ -13,7 +17,7 @@ jobs:
     steps:
       - name: Ping keepalive endpoint
         env:
-          SITE_URL: ${{ secrets.SITE_URL }}
+          SITE_URL: ${{ github.event.inputs.site_url || secrets.SITE_URL }}
         run: |
           set -euo pipefail
           echo "Pinging $SITE_URL/api/keepalive"
