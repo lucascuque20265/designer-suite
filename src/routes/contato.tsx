@@ -50,14 +50,14 @@ function Contato() {
     <div className="px-6 md:px-10 py-24 md:py-32">
       <div className="mx-auto max-w-[1400px] grid gap-16 md:grid-cols-[3fr_2fr]">
         <div>
-          <p className="section-label">[ 03 / Contato ]</p>
+          <p className="section-label"></p>
           <h1 className="font-display text-6xl md:text-8xl mt-4 leading-[0.95]">
             Vamos criar
             <br />
             algo <span className="text-primary">memorável</span>.
           </h1>
           <p className="mt-6 text-lg text-muted-foreground max-w-xl">
-            Envie uma mensagem contando sobre o projeto — respondo em até 1 dia útil.
+            Envie uma mensagem contando sobre o projeto, respondo em até 1 dia útil.
           </p>
 
           <form onSubmit={onSubmit} className="mt-10 space-y-5 max-w-xl">

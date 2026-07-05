@@ -2,7 +2,7 @@
 
 ## Stack e infra
 - TanStack Start (já configurado) + Tailwind v4 + shadcn.
-- **Lovable Cloud** (Supabase) para auth, banco e storage de mídias.
+-- **Supabase (cloud)** para auth, banco e storage de mídias.
 - Embla Carousel para o carrossel de slides (imagens + vídeos, teclado, swipe, thumbs, dots).
 - Framer Motion para microanimações sutis (fade/slide no scroll, hover nos cards).
 
@@ -70,7 +70,7 @@ user_roles(id, user_id -> auth.users, role app_role)  -- padrão has_role
 - **Excluir**: com confirmação (dialog); cascata remove mídias no banco + limpa storage.
 
 ## Fluxo de implementação
-1. Habilitar Lovable Cloud.
+1. Habilitar o serviço em nuvem (Supabase) e conectar o projeto.
 2. Migração inicial (enum, tabelas, RLS, grants, `has_role`, bucket).
 3. Design tokens em `src/styles.css` + fontes via `<link>` no `__root.tsx`.
 4. Layout compartilhado (nav minimal, footer, botão WhatsApp flutuante).

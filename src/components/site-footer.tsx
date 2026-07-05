@@ -9,7 +9,7 @@ export function SiteFooter() {
           <p className="section-label">[ Anima Estudio ]</p>
           <p className="font-display text-3xl mt-3">Lucas Miranda</p>
           <p className="text-sm text-muted-foreground mt-2 max-w-xs">
-            Designer gráfico sênior — construindo identidades e experiências visuais de impacto.
+            Construindo identidades e experiências visuais de impacto.
           </p>
         </div>
 
@@ -33,8 +33,8 @@ export function SiteFooter() {
       </div>
       <div className="border-t border-border/60">
         <div className="mx-auto max-w-[1400px] px-6 md:px-10 py-6 flex flex-col md:flex-row justify-between gap-3 text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} Lucas Miranda — Anima Estudio. Todos os direitos reservados.</p>
-          <p className="font-mono">Feito com paixão pelo ofício.</p>
+          <p>© 2020 Lucas Miranda — Anima Estudio. Todos os direitos reservados.</p>
+          <p className="font-mono">Feito com muita paixão e café.</p>
         </div>
       </div>
     </footer>

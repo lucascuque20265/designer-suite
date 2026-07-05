@@ -34,7 +34,7 @@ function Home() {
             transition={{ duration: 0.6 }}
             className="section-label"
           >
-            [ 00 / Anima Estudio · Design Sênior ]
+            
           </motion.p>
           <motion.h1
             initial={{ opacity: 0, y: 24 }}
@@ -87,7 +87,7 @@ function Home() {
         <div className="mx-auto max-w-[1400px]">
           <div className="flex items-end justify-between mb-16">
             <div>
-              <p className="section-label">[ 01 / Projetos em destaque ]</p>
+              <p className="section-label"></p>
               <h2 className="font-display text-5xl md:text-7xl mt-4">Trabalho selecionado</h2>
             </div>
             <Link to="/trabalhos" className="hidden md:inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
@@ -116,7 +116,7 @@ function Home() {
         <div className="mx-auto max-w-[1400px]">
           <div className="border-t border-border pt-16 grid gap-10 md:grid-cols-[1fr_auto] items-end">
             <div>
-              <p className="section-label">[ 02 / Colaborar ]</p>
+              <p className="section-label"></p>
               <h2 className="font-display text-5xl md:text-7xl mt-4 leading-[0.95]">
                 Tem um projeto que pede
                 <br />
