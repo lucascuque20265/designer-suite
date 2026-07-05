@@ -4,9 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { LogOut, Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { LogOut, Plus, Pencil, Trash2, ExternalLink, GripVertical } from "lucide-react";
 import type { Project } from "@/lib/portfolio";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   head: () => ({ meta: [{ title: "Painel — Projetos" }, { name: "robots", content: "noindex" }] }),
@@ -35,8 +39,9 @@ function AdminIndex() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
+  const [localOrder, setLocalOrder] = useState<Project[]>([]);
 
-  const { data: projects, isLoading } = useQuery({
+  const { isLoading } = useQuery({
     queryKey: ["admin-projects"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -45,9 +50,22 @@ function AdminIndex() {
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as unknown as Project[];
+      const list = (data ?? []) as unknown as Project[];
+      setLocalOrder(list);
+      return list;
     },
     enabled: !!isAdmin,
+  });
+
+  const reorder = useMutation({
+    mutationFn: async (ordered: Project[]) => {
+      await Promise.all(
+        ordered.map((p, i) =>
+          supabase.from("projects").update({ sort_order: i }).eq("id", p.id)
+        )
+      );
+    },
+    onError: (e: Error) => toast.error("Erro ao salvar ordem: " + e.message),
   });
 
   const toggleFeatured = useMutation({
@@ -77,6 +95,18 @@ function AdminIndex() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = localOrder.findIndex((p) => p.id === active.id);
+    const newIdx = localOrder.findIndex((p) => p.id === over.id);
+    const next = arrayMove(localOrder, oldIdx, newIdx);
+    setLocalOrder(next);
+    reorder.mutate(next);
+  }
 
   async function signOut() {
     await qc.cancelQueries();
@@ -113,65 +143,103 @@ function AdminIndex() {
 
       {isLoading ? (
         <p className="text-muted-foreground">Carregando projetos...</p>
-      ) : !projects?.length ? (
+      ) : !localOrder.length ? (
         <div className="border border-dashed border-border rounded-lg p-12 text-center">
           <p className="text-muted-foreground">Nenhum projeto ainda. Comece criando o primeiro.</p>
         </div>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
-          {projects.map((p) => (
-            <div key={p.id} className="grid grid-cols-[80px_1fr_auto] gap-4 p-4 items-center">
-              <div className="h-16 w-20 bg-surface rounded overflow-hidden">
-                {p.cover_url && (
-                  p.cover_url.match(/\.(mp4|webm|mov)/i)
-                    ? <video src={p.cover_url} muted playsInline className="h-full w-full object-cover" />
-                    : <img src={p.cover_url} alt="" className="h-full w-full object-cover" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="font-display text-xl truncate">{p.title}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {p.client ?? "sem cliente"} · {p.category?.name ?? "sem categoria"} · {p.year ?? "—"}
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Switch checked={p.published} onCheckedChange={(v) => togglePublished.mutate({ id: p.id, published: v })} />
-                  Publicado
-                </label>
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Switch checked={p.featured} onCheckedChange={(v) => toggleFeatured.mutate({ id: p.id, featured: v })} />
-                  Destaque
-                </label>
-                <Button asChild variant="ghost" size="icon" title="Ver">
-                  <Link to="/projeto/$slug" params={{ slug: p.slug }} target="_blank"><ExternalLink className="h-4 w-4" /></Link>
-                </Button>
-                <Button asChild variant="ghost" size="icon" title="Editar">
-                  <Link to="/admin/$id" params={{ id: p.id }}><Pencil className="h-4 w-4" /></Link>
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" title="Excluir"><Trash2 className="h-4 w-4" /></Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Excluir projeto?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Isso removerá o projeto e todos os slides. A ação não pode ser desfeita.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => remove.mutate(p.id)}>Excluir</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={localOrder.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+            <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
+              {localOrder.map((p) => (
+                <SortableProjectRow
+                  key={p.id}
+                  project={p}
+                  onTogglePublished={(v) => togglePublished.mutate({ id: p.id, published: v })}
+                  onToggleFeatured={(v) => toggleFeatured.mutate({ id: p.id, featured: v })}
+                  onDelete={() => remove.mutate(p.id)}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
     </AdminShell>
+  );
+}
+
+function SortableProjectRow({
+  project: p,
+  onTogglePublished,
+  onToggleFeatured,
+  onDelete,
+}: {
+  project: Project;
+  onTogglePublished: (v: boolean) => void;
+  onToggleFeatured: (v: boolean) => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: p.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className="grid grid-cols-[32px_80px_1fr_auto] gap-4 p-4 items-center">
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="cursor-grab text-muted-foreground hover:text-foreground"
+        aria-label="Reordenar"
+      >
+        <GripVertical className="h-5 w-5" />
+      </button>
+      <div className="h-16 w-20 bg-surface rounded overflow-hidden">
+        {p.cover_url && (
+          p.cover_url.match(/\.(mp4|webm|mov)/i)
+            ? <video src={p.cover_url} muted playsInline className="h-full w-full object-cover" />
+            : <img src={p.cover_url} alt="" className="h-full w-full object-cover" />
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="font-display text-xl truncate">{p.title}</p>
+        <p className="text-xs text-muted-foreground truncate">
+          {p.client ?? "sem cliente"} · {p.category?.name ?? "sem categoria"} · {p.year ?? "—"}
+        </p>
+      </div>
+      <div className="flex items-center gap-4">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Switch checked={p.published} onCheckedChange={onTogglePublished} />
+          Publicado
+        </label>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Switch checked={p.featured} onCheckedChange={onToggleFeatured} />
+          Destaque
+        </label>
+        <Button asChild variant="ghost" size="icon" title="Ver">
+          <Link to="/projeto/$slug" params={{ slug: p.slug }} target="_blank"><ExternalLink className="h-4 w-4" /></Link>
+        </Button>
+        <Button asChild variant="ghost" size="icon" title="Editar">
+          <Link to="/admin/$id" params={{ id: p.id }}><Pencil className="h-4 w-4" /></Link>
+        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="ghost" size="icon" title="Excluir"><Trash2 className="h-4 w-4" /></Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir projeto?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Isso removerá o projeto e todos os slides. A ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={onDelete}>Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
   );
 }
 
