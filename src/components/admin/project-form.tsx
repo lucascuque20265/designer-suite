@@ -70,6 +70,10 @@ export function ProjectForm({
   );
   const [uploading, setUploading] = useState(false);
 
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+  const MAX_IMAGE_DIMENSION = 2048; // px
+  const DEFAULT_IMAGE_QUALITY = 0.8; // 80%
+
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
 
   function setField<K extends keyof ProjectFormValues>(key: K, v: ProjectFormValues[K]) {
@@ -99,11 +103,49 @@ export function ProjectForm({
       const startPos = media.length;
       const uploaded: Media[] = [];
       for (const [i, file] of Array.from(files).entries()) {
-        const ext = file.name.split(".").pop() ?? "bin";
-        const path = `${projectId}/${crypto.randomUUID()}.${ext}`;
+        // Validate size and compress images if needed
+        let toUpload: File | Blob = file;
+        if (file.size > MAX_FILE_SIZE) {
+          if (file.type.startsWith("image/")) {
+            try {
+              const compressed = await compressImageFile(file, MAX_IMAGE_DIMENSION, DEFAULT_IMAGE_QUALITY);
+              if (compressed.size > MAX_FILE_SIZE) {
+                // try lowering quality progressively
+                let q = DEFAULT_IMAGE_QUALITY;
+                let blob = compressed;
+                while (blob.size > MAX_FILE_SIZE && q > 0.5) {
+                  q -= 0.1;
+                  // eslint-disable-next-line no-await-in-loop
+                  blob = await compressImageFile(file, Math.round(MAX_IMAGE_DIMENSION * (q / DEFAULT_IMAGE_QUALITY)), q);
+                }
+                if (blob.size <= MAX_FILE_SIZE) toUpload = blob;
+                else {
+                  toast.error(`${file.name} ainda excede 50MB após compressão. Comprima localmente ou remova.`);
+                  continue;
+                }
+              } else {
+                toUpload = compressed;
+              }
+            } catch (err) {
+              toast.error("Erro ao comprimir imagem");
+              continue;
+            }
+          } else if (file.type.startsWith("video/")) {
+            toast.error(`${file.name} é vídeo e excede 50MB. Por favor comprima localmente ou configure transcodificação server-side.`);
+            continue;
+          } else {
+            toast.error(`${file.name} excede 50MB.`);
+            continue;
+          }
+        }
+
+        const ext = (file.type.startsWith("image/") && (toUpload as File)?.name ? ((toUpload as File).name.split('.').pop() ?? 'jpg') : file.name.split('.').pop() ?? 'bin');
+        const filename = `${crypto.randomUUID()}.${ext}`;
+        const path = `${projectId}/${filename}`;
+
         const { error: upErr } = await supabase.storage
           .from("portfolio-media")
-          .upload(path, file, { contentType: file.type, upsert: false });
+          .upload(path, toUpload, { contentType: (toUpload as File | Blob).type || file.type, upsert: false });
         if (upErr) throw upErr;
         const { data: pub } = supabase.storage.from("portfolio-media").getPublicUrl(path);
         const type: "image" | "video" = file.type.startsWith("video") ? "video" : "image";
@@ -129,6 +171,37 @@ export function ProjectForm({
     } finally {
       setUploading(false);
     }
+  }
+
+  async function compressImageFile(file: File, maxDim = MAX_IMAGE_DIMENSION, quality = DEFAULT_IMAGE_QUALITY): Promise<Blob> {
+    if (!file.type.startsWith("image/")) throw new Error("Not an image");
+    // Use createImageBitmap for better performance when available
+    const bitmap = await createImageBitmap(file);
+    let { width, height } = bitmap;
+    const ratio = width / height;
+    if (Math.max(width, height) > maxDim) {
+      if (width >= height) {
+        width = maxDim;
+        height = Math.round(maxDim / ratio);
+      } else {
+        height = maxDim;
+        width = Math.round(maxDim * ratio);
+      }
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas not supported");
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    // Prefer webp for better compression; fallback to jpeg
+    const mime = "image/webp";
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => {
+        if (b) resolve(b);
+        else reject(new Error("Failed to create blob"));
+      }, mime, quality);
+    });
   }
 
   async function removeMedia(m: Media) {
