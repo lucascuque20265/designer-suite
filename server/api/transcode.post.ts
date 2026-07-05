@@ -23,6 +23,11 @@ export default defineEventHandler(async (event) => {
   const { supabaseAdmin } = await import('@/integrations/supabase/client.server');
 
   try {
+    // mark as processing if we have a media row id
+    if (media_id) {
+      try { await supabaseAdmin.from('media').update({ transcode_status: 'processing' }).eq('id', media_id); } catch (e) { console.warn('Failed to set processing status', e); }
+    }
+
     const download = await supabaseAdmin.storage.from('portfolio-media').download(storage_path);
     if (download.error) throw download.error;
     const blob = download.data as Blob;
@@ -100,7 +105,7 @@ export default defineEventHandler(async (event) => {
     const { data: pub } = supabaseAdmin.storage.from('portfolio-media').getPublicUrl(newPath);
 
     if (media_id) {
-      await supabaseAdmin.from('media').update({ url: pub.publicUrl, storage_path: newPath }).eq('id', media_id);
+      await supabaseAdmin.from('media').update({ url: pub.publicUrl, storage_path: newPath, transcode_status: 'done' }).eq('id', media_id);
     }
 
     // cleanup
@@ -110,6 +115,8 @@ export default defineEventHandler(async (event) => {
     return { ok: true, url: pub.publicUrl, size: outBuf.length };
   } catch (err: any) {
     console.error(err);
+    // mark failed if we have media id
+    try { if (media_id) await (await import('@/integrations/supabase/client.server')).supabaseAdmin.from('media').update({ transcode_status: 'failed' }).eq('id', media_id); } catch (e) { console.warn('Failed to set failed status', e); }
     throw createError({ statusCode: 500, statusMessage: String(err?.message ?? err) });
   }
 });

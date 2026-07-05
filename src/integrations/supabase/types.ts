@@ -39,6 +39,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          transcode_status: string | null
           is_cover: boolean
           position: number
           project_id: string
@@ -49,6 +50,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          transcode_status?: string | null
           is_cover?: boolean
           position?: number
           project_id: string
@@ -59,6 +61,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          transcode_status?: string | null
           is_cover?: boolean
           position?: number
           project_id?: string

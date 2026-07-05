@@ -157,6 +157,7 @@ export function ProjectForm({
             url: pub.publicUrl,
             storage_path: path,
             position: startPos + i,
+            transcode_status: type === 'video' ? 'pending' : null,
           })
           .select()
           .single();
@@ -426,6 +427,18 @@ function SortableMediaRow({ media, isCover, onCover, onRemove }: {
       </div>
       <div className="flex-1 text-xs text-muted-foreground truncate">
         {media.type} · pos {media.position}
+        {media.transcode_status === 'processing' && (
+          <span className="ml-2 text-yellow-500">Processando</span>
+        )}
+        {media.transcode_status === 'pending' && (
+          <span className="ml-2 text-blue-500">Pendente</span>
+        )}
+        {media.transcode_status === 'failed' && (
+          <span className="ml-2 text-red-500">Falha</span>
+        )}
+        {media.transcode_status === 'done' && (
+          <span className="ml-2 text-green-500">Pronto</span>
+        )}
       </div>
       <button type="button" onClick={onCover} title="Definir como capa" className={isCover ? "text-primary" : "text-muted-foreground hover:text-foreground"}>
         <Star className="h-4 w-4" fill={isCover ? "currentColor" : "none"} />

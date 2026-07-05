@@ -14,6 +14,7 @@ export type Media = {
   storage_path: string | null;
   position: number;
   is_cover: boolean;
+  transcode_status?: 'pending' | 'processing' | 'done' | 'failed' | null;
 };
 
 export type Project = {
