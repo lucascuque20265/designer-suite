@@ -14,11 +14,10 @@ export default defineEventHandler(async (event) => {
     let pid = projectId;
     if (!pid) {
       if (!slug) throw createError({ statusCode: 400, statusMessage: 'project_id or slug required' });
-      const { data: pData, error: pErr } = await supabaseAdmin.from('projects').select('id').eq('slug', slug).single();
+      const { data: pData, error: pErr } = await supabaseAdmin.from('projects').select('id').eq('slug', slug).limit(1);
       if (pErr) throw pErr;
-      pid = (pData as any).id;
-    }
-
+      if (!pData || (pData as any[]).length === 0) throw createError({ statusCode: 404, statusMessage: `Project not found: ${slug}` });
+      pid = (pData as any[])[0].id;
     const { data: medias, error: mErr } = await supabaseAdmin
       .from('media')
       .select('id,storage_path,url,type')
