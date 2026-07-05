@@ -71,6 +71,7 @@
     "tslib": "^2.6.0",
     "ffmpeg-static": "^5.1.0",
     "execa": "^7.1.1",
+    "sharp": "^0.32.4",
     "zod": "^3.24.2"
   },
   "devDependencies": {
