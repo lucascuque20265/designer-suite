@@ -298,7 +298,23 @@ export function ProjectForm({
     setSaving(true);
     try {
       const category_id = await ensureCategory();
-      const slug = slugify(values.title);
+      // Ensure slug uniqueness to avoid 409 Conflict on insert
+      async function generateUniqueSlug(base: string, excludeId?: string | null) {
+        let candidate = base;
+        let i = 2;
+        while (true) {
+          const { data, error } = await supabase.from("projects").select("id").eq("slug", candidate).limit(1);
+          if (error) throw error;
+          const exists = Array.isArray(data) && data.length > 0 && data[0].id !== excludeId;
+          if (!exists) return candidate;
+          candidate = `${base}-${i}`;
+          i += 1;
+          if (i > 100) throw new Error("Não foi possível gerar um slug único");
+        }
+      }
+
+      const baseSlug = slugify(values.title);
+      const slug = await generateUniqueSlug(baseSlug, projectId ?? null);
       const tools = values.tools
         .split(",")
         .map((s) => s.trim())
@@ -344,7 +360,18 @@ export function ProjectForm({
       qc.invalidateQueries({ queryKey: ["admin-projects"] });
       onSaved(saved);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
+      const err = e as any;
+      // Log full error to the console for debugging
+      // and prefer a structured message from Supabase if available
+      // so users/admins see a helpful toast instead of a generic message.
+      // Examples: permission denied, unique constraint violation, validation.
+      // eslint-disable-next-line no-console
+      console.error("Erro ao salvar projeto:", err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : err?.error?.message ?? err?.message ?? (typeof err === "string" ? err : JSON.stringify(err));
+      toast.error(message || "Erro ao salvar");
     } finally {
       setSaving(false);
     }
