@@ -161,3 +161,13 @@
   transform-origin: center;
   will-change: transform;
 }
+
+/* CTA pulse animation used by project card instruction */
+@keyframes ctaPulse {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  50% { transform: translateY(-6px) scale(1.03); opacity: 0.95; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.cta-pulse {
+  animation: ctaPulse 2.4s ease-in-out infinite;
+}

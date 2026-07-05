@@ -36,6 +36,18 @@ export function ProjectCard({ project, index }: { project: Project; index: numbe
         className="group block"
       >
         <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-surface">
+          {/* CTA overlay: instrução para abrir detalhes */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="transition-opacity duration-300 opacity-100 group-hover:opacity-0">
+              <span className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-3 py-1 rounded-full font-mono text-sm shadow-lg cta-pulse">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+                  <path d="M12 2v20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M5 9l7-7 7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Clique para abrir
+              </span>
+            </div>
+          </div>
           {medias.length > 1 ? (
             <div ref={emblaRef} className="absolute inset-0 overflow-hidden">
               <div className="flex h-full">
