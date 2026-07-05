@@ -33,6 +33,7 @@ export type Project = {
   created_at: string;
   updated_at: string;
   category?: Category | null;
+  media?: Media[];
 };
 
 export type ProjectWithMedia = Project & { media: Media[] };
@@ -56,7 +57,7 @@ export async function fetchCategories(): Promise<Category[]> {
 export async function fetchPublishedProjects(): Promise<Project[]> {
   const { data, error } = await supabase
     .from("projects")
-    .select("*, category:categories(*)")
+    .select("*, category:categories(*), media(*)")
     .eq("published", true)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
