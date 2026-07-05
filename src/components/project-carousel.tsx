@@ -140,169 +140,190 @@ export function ProjectCarousel({ media }: { media: Media[] }) {
           <div className="flex">
             {media.map((m, i) => (
               <div key={m.id} className="flex-[0_0_100%] min-w-0 relative">
-                <div
-                  style={{ aspectRatio: aspects[m.id] ?? "16/10", maxHeight: "75vh" }}
-                  className="bg-black flex items-center justify-center overflow-hidden relative"
-                >
+                <div className="bg-black relative overflow-hidden" style={{ maxHeight: "75vh" }}>
+                  {/* background fill (blurred) */}
                   {m.type === "image" ? (
-                    <img
-                      src={m.url}
-                      alt={`Slide ${i + 1}`}
-                      loading={i === 0 ? "eager" : "lazy"}
-                      onLoad={(e) => {
-                        const img = e.currentTarget as HTMLImageElement;
-                        if (img.naturalWidth && img.naturalHeight) {
-                          setAspects((p) => ({ ...p, [m.id]: `${img.naturalWidth}/${img.naturalHeight}` }));
-                        }
-                      }}
-                      className={cn(
-                        "h-full w-full object-cover transition-transform duration-700",
-                        i === selected ? "scale-105" : "scale-100"
-                      )}
+                    <div
+                      aria-hidden
+                      style={{ backgroundImage: `url(${m.url})` }}
+                      className="absolute inset-0 bg-center bg-cover filter blur-2xl scale-110"
                     />
                   ) : (
-                    <>
-                      <video
-                        ref={(el) => (videoRefs.current[m.id] = el)}
-                        src={m.url}
-                        autoPlay={i === selected}
-                        loop
-                        muted={muted}
-                        playsInline
-                        controls={false}
-                        preload="metadata"
-                        onLoadedMetadata={(e) => {
-                          const v = e.currentTarget as HTMLVideoElement;
-                          if (v.videoWidth && v.videoHeight) {
-                            setAspects((p) => ({ ...p, [m.id]: `${v.videoWidth}/${v.videoHeight}` }));
-                          }
-                          setDurations((p) => ({ ...p, [m.id]: v.duration }));
-                          v.volume = volume;
-                          v.muted = muted;
-                        }}
-                        onTimeUpdate={(e) => {
-                          const v = e.currentTarget as HTMLVideoElement;
-                          setProgress((p) => ({ ...p, [m.id]: v.currentTime }));
-                        }}
-                        onPlay={() => setPlaying((p) => ({ ...p, [m.id]: true }))}
-                        onPause={() => setPlaying((p) => ({ ...p, [m.id]: false }))}
-                        className="h-full w-full object-cover"
-                      />
-
-                      {/* central play/pause */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const v = videoRefs.current[m.id];
-                          if (!v) return;
-                          if (v.paused) {
-                            v.play().catch(() => {});
-                          } else {
-                            v.pause();
-                          }
-                        }}
-                        aria-label="Play/Pause"
-                        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full bg-black/50 text-white grid place-items-center hover:scale-105 transition-transform"
-                      >
-                        {!playing[m.id] ? (
-                          <svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M2 1.5L16 10L2 18.5V1.5Z" fill="currentColor" />
-                          </svg>
-                        ) : (
-                          <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="0" y="0" width="4" height="16" fill="currentColor" />
-                            <rect x="10" y="0" width="4" height="16" fill="currentColor" />
-                          </svg>
-                        )}
-                      </button>
-
-                      {/* controls for selected video */}
-                      {i === selected && (
-                        <div className="absolute left-4 right-4 bottom-4 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const v = videoRefs.current[m.id];
-                                if (!v) return;
-                                if (v.paused) v.play().catch(() => {});
-                                else v.pause();
-                              }}
-                              className="h-9 w-9 grid place-items-center rounded-full bg-black/40 text-white"
-                            >
-                              {!playing[m.id] ? (
-                                <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <path d="M1 1 L13 8 L1 15 V1 Z" fill="currentColor" />
-                                </svg>
-                              ) : (
-                                <svg width="10" height="12" viewBox="0 0 10 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                  <rect x="0" y="0" width="3" height="12" fill="currentColor" />
-                                  <rect x="7" y="0" width="3" height="12" fill="currentColor" />
-                                </svg>
-                              )}
-                            </button>
-
-                            <div
-                              onClick={(e) => handleSeek(e, m.id)}
-                              className="h-2 w-72 bg-white/20 rounded cursor-pointer overflow-hidden"
-                            >
-                              <div
-                                style={{ width: `${((progress[m.id] ?? 0) / (durations[m.id] || 1)) * 100}%` }}
-                                className="h-full bg-primary rounded"
-                              />
-                            </div>
-                            <div className="text-xs text-white font-mono">
-                              {String(Math.floor((progress[m.id] ?? 0) / 60)).padStart(2, "0")}:{String(Math.floor((progress[m.id] ?? 0) % 60)).padStart(2, "0")}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              aria-label={muted ? "Ativar som" : "Silenciar"}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setMuted((v) => {
-                                  const next = !v;
-                                  const vEl = videoRefs.current[media[selected]?.id];
-                                  if (vEl) vEl.muted = next;
-                                  return next;
-                                });
-                              }}
-                              className="h-9 w-9 grid place-items-center rounded-full bg-white/10 shadow-md border border-border/40 hover:bg-primary hover:text-primary-foreground transition-colors"
-                            >
-                              {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                            </button>
-                            <input
-                              type="range"
-                              min={0}
-                              max={100}
-                              value={Math.round((volume ?? 1) * 100)}
-                              onChange={(e) => {
-                                const v = Number(e.target.value) / 100;
-                                setVolume(v);
-                                const vEl = videoRefs.current[media[selected]?.id];
-                                if (vEl) {
-                                  vEl.volume = v;
-                                  vEl.muted = v === 0;
-                                  setMuted(v === 0);
-                                }
-                              }}
-                              className="w-24"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </>
+                    <video
+                      aria-hidden
+                      src={m.url}
+                      muted
+                      autoPlay
+                      loop
+                      playsInline
+                      className="absolute inset-0 h-full w-full object-cover filter blur-2xl scale-110"
+                    />
                   )}
 
-                  {/* bottom gradient + caption */}
-                  <div className="absolute left-0 right-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
-                  <div className="absolute left-4 bottom-4 text-sm text-white flex items-center gap-3">
-                    <div className="px-2 py-1 rounded bg-black/40 text-xs uppercase tracking-wider">{m.type}</div>
-                    <div className="text-xs font-medium">Slide {i + 1} de {media.length}</div>
+                  {/* dark overlay to reduce contrast behind foreground */}
+                  <div className="absolute inset-0 bg-black/60" />
+
+                  {/* foreground centered media */}
+                  <div className="relative z-10 grid place-items-center h-full">
+                    <div style={{ aspectRatio: aspects[m.id] ?? "16/10", maxHeight: "75vh", width: "min(60vw, 980px)" }} className="overflow-hidden">
+                      {m.type === "image" ? (
+                        <img
+                          src={m.url}
+                          alt={`Slide ${i + 1}`}
+                          loading={i === 0 ? "eager" : "lazy"}
+                          onLoad={(e) => {
+                            const img = e.currentTarget as HTMLImageElement;
+                            if (img.naturalWidth && img.naturalHeight) {
+                              setAspects((p) => ({ ...p, [m.id]: `${img.naturalWidth}/${img.naturalHeight}` }));
+                            }
+                          }}
+                          className={cn("h-full w-full object-contain transition-transform duration-700", i === selected ? "scale-105" : "scale-100")}
+                        />
+                      ) : (
+                        <>
+                          <video
+                            ref={(el) => (videoRefs.current[m.id] = el)}
+                            src={m.url}
+                            autoPlay={i === selected}
+                            loop
+                            muted={muted}
+                            playsInline
+                            controls={false}
+                            preload="metadata"
+                            onLoadedMetadata={(e) => {
+                              const v = e.currentTarget as HTMLVideoElement;
+                              if (v.videoWidth && v.videoHeight) {
+                                setAspects((p) => ({ ...p, [m.id]: `${v.videoWidth}/${v.videoHeight}` }));
+                              }
+                              setDurations((p) => ({ ...p, [m.id]: v.duration }));
+                              v.volume = volume;
+                              v.muted = muted;
+                            }}
+                            onTimeUpdate={(e) => {
+                              const v = e.currentTarget as HTMLVideoElement;
+                              setProgress((p) => ({ ...p, [m.id]: v.currentTime }));
+                            }}
+                            onPlay={() => setPlaying((p) => ({ ...p, [m.id]: true }))}
+                            onPause={() => setPlaying((p) => ({ ...p, [m.id]: false }))}
+                            className="h-full w-full object-contain"
+                          />
+
+                          {/* central play/pause */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const v = videoRefs.current[m.id];
+                              if (!v) return;
+                              if (v.paused) {
+                                v.play().catch(() => {});
+                              } else {
+                                v.pause();
+                              }
+                            }}
+                            aria-label="Play/Pause"
+                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-12 w-12 rounded-full bg-black/50 text-white grid place-items-center hover:scale-105 transition-transform"
+                          >
+                            {!playing[m.id] ? (
+                              <svg width="18" height="20" viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2 1.5L16 10L2 18.5V1.5Z" fill="currentColor" />
+                              </svg>
+                            ) : (
+                              <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="0" y="0" width="4" height="16" fill="currentColor" />
+                                <rect x="10" y="0" width="4" height="16" fill="currentColor" />
+                              </svg>
+                            )}
+                          </button>
+
+                          {/* controls for selected video */}
+                          {i === selected && (
+                            <div className="absolute left-4 right-4 bottom-4 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const v = videoRefs.current[m.id];
+                                    if (!v) return;
+                                    if (v.paused) v.play().catch(() => {});
+                                    else v.pause();
+                                  }}
+                                  className="h-9 w-9 grid place-items-center rounded-full bg-black/40 text-white"
+                                >
+                                  {!playing[m.id] ? (
+                                    <svg width="14" height="16" viewBox="0 0 14 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <path d="M1 1 L13 8 L1 15 V1 Z" fill="currentColor" />
+                                    </svg>
+                                  ) : (
+                                    <svg width="10" height="12" viewBox="0 0 10 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                      <rect x="0" y="0" width="3" height="12" fill="currentColor" />
+                                      <rect x="7" y="0" width="3" height="12" fill="currentColor" />
+                                    </svg>
+                                  )}
+                                </button>
+
+                                <div
+                                  onClick={(e) => handleSeek(e, m.id)}
+                                  className="h-2 w-72 bg-white/20 rounded cursor-pointer overflow-hidden"
+                                >
+                                  <div
+                                    style={{ width: `${((progress[m.id] ?? 0) / (durations[m.id] || 1)) * 100}%` }}
+                                    className="h-full bg-primary rounded"
+                                  />
+                                </div>
+                                <div className="text-xs text-white font-mono">
+                                  {String(Math.floor((progress[m.id] ?? 0) / 60)).padStart(2, "0")}:{String(Math.floor((progress[m.id] ?? 0) % 60)).padStart(2, "0")}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  aria-label={muted ? "Ativar som" : "Silenciar"}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setMuted((v) => {
+                                      const next = !v;
+                                      const vEl = videoRefs.current[media[selected]?.id];
+                                      if (vEl) vEl.muted = next;
+                                      return next;
+                                    });
+                                  }}
+                                  className="h-9 w-9 grid place-items-center rounded-full bg-white/10 shadow-md border border-border/40 hover:bg-primary hover:text-primary-foreground transition-colors"
+                                >
+                                  {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                                </button>
+                                <input
+                                  type="range"
+                                  min={0}
+                                  max={100}
+                                  value={Math.round((volume ?? 1) * 100)}
+                                  onChange={(e) => {
+                                    const v = Number(e.target.value) / 100;
+                                    setVolume(v);
+                                    const vEl = videoRefs.current[media[selected]?.id];
+                                    if (vEl) {
+                                      vEl.volume = v;
+                                      vEl.muted = v === 0;
+                                      setMuted(v === 0);
+                                    }
+                                  }}
+                                  className="w-24"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {/* bottom gradient + caption */}
+                      <div className="absolute left-0 right-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent pointer-events-none" />
+                      <div className="absolute left-4 bottom-4 text-sm text-white flex items-center gap-3">
+                        <div className="px-2 py-1 rounded bg-black/40 text-xs uppercase tracking-wider">{m.type}</div>
+                        <div className="text-xs font-medium">Slide {i + 1} de {media.length}</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
