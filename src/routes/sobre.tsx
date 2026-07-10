@@ -30,7 +30,13 @@ const tools = [
   "Adobe InDesign",
   "Adobe After Effects",
   "Figma",
-  "Nano Banana 2, GPT Image2, Midjourney, Veo AI, RunwayM, Seedance, Kling, etc.",
+  "Nano Banana 2",
+  "GPT Image2",
+  "Midjourney",
+  "Veo AI",
+  "Runway",
+  "Seedance",
+  "Kling",
 ];
 
 function Sobre() {
