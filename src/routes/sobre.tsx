@@ -31,7 +31,7 @@ const tools = [
   "Adobe After Effects",
   "Figma",
   "Nano Banana 2",
-  "GPT Image2",
+  "GPT Image fa2",
   "Midjourney",
   "Veo AI",
   "Runway",
