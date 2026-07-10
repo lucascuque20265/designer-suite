@@ -6,7 +6,7 @@ export const Route = createFileRoute("/sobre")({
     meta: [
       { title: "Sobre — Lucas Miranda | Anima Estudio" },
       { name: "description", content: "Trajetória, especialidades e ferramentas de Lucas Miranda, designer gráfico sênior." },
-      { property: "og:title", content: "Sobre — Lucas Miranda" },
+      { property: "og:title", content: "Sobre" },
       { property: "og:description", content: "Designer sênior com trajetória em identidade visual, direção de arte e projetos editoriais." },
       { property: "og:url", content: "/sobre" },
     ],
@@ -18,9 +18,9 @@ export const Route = createFileRoute("/sobre")({
 const specialties = [
   "Identidade visual e branding",
   "Direção de arte",
-  "Design editorial",
+  "Videomaker para marcas",
   "Design para campanhas",
-  "Design de embalagens",
+  "Edição de Vídeo e Motion Graphics",
   "Design digital e social",
 ];
 
@@ -30,14 +30,14 @@ const tools = [
   "Adobe InDesign",
   "Adobe After Effects",
   "Figma",
-  "Cinema 4D",
+  "Nano Banana 2, GPT Image2, Midjourney, Veo AI, RunwayM, Seedance, Kling, etc.",
 ];
 
 function Sobre() {
   return (
     <div className="px-6 md:px-10 py-24 md:py-32">
       <div className="mx-auto max-w-[1400px]">
-        <p className="section-label">[ 02 / Sobre ]</p>
+        <p className="section-label">[ Sobre ]</p>
         <h1 className="font-display text-6xl md:text-8xl mt-4 leading-[0.95]">
           Design como <span className="text-primary">ofício</span>,
           <br />
@@ -48,8 +48,8 @@ function Sobre() {
           <div className="space-y-6 text-lg leading-relaxed text-foreground/90">
             <p>
               Sou Lucas Miranda, designer gráfico sênior à frente do Anima Estudio.
-              Trabalho há mais de uma década desenhando marcas, sistemas visuais e
-              peças editoriais que carregam intenção — não decoração.
+              Trabalho há mais de uma década desenhando marcas, sistemas visuais,
+              campanhas, edição de vídeos e motion graphics que carregam intenção, não decoração.
             </p>
             <p>
               Meu processo une pesquisa, direção de arte e execução obsessiva por detalhe.
@@ -58,8 +58,8 @@ function Sobre() {
             </p>
             <p>
               {/* TODO: personalize esta seção com sua história, clientes marcantes e conquistas. */}
-              Já colaborei com marcas de diferentes portes — de projetos independentes a
-              equipes internas de grandes empresas —, sempre defendendo que boas ideias
+              Já colaborei com marcas de diferentes portes, de projetos independentes a
+              equipes internas de grandes empresas, sempre defendendo que boas ideias
               merecem execução impecável.
             </p>
           </div>

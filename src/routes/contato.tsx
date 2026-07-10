@@ -14,7 +14,7 @@ export const Route = createFileRoute("/contato")({
     meta: [
       { title: "Contato" },
       { name: "description", content: "Fale com Lucas Miranda para orçamentos, colaborações e projetos de design gráfico." },
-      { property: "og:title", content: "Contato — Lucas Miranda" },
+      { property: "og:title", content: "Contato" },
       { property: "og:description", content: "Formulário direto, WhatsApp e e-mail para começar seu projeto." },
       { property: "og:url", content: "/contato" },
     ],
@@ -57,7 +57,7 @@ function Contato() {
             algo <span className="text-primary">memorável</span>.
           </h1>
           <p className="mt-6 text-lg text-muted-foreground max-w-xl">
-            Envie uma mensagem contando sobre o projeto, respondo em até 2 dias úteis.
+            Envie uma mensagem contando sobre o projeto, respondo em até 1 dia útil.
           </p>
 
           <form onSubmit={onSubmit} className="mt-10 space-y-5 max-w-xl">
