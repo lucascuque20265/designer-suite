@@ -10,7 +10,7 @@ export const Route = createFileRoute("/trabalhos")({
     meta: [
       { title: "Trabalhos — Lucas Miranda | Anima Estudio" },
       { name: "description", content: "Portfólio completo de projetos de design gráfico: identidade visual, direção de arte, editorial e mais." },
-      { property: "og:title", content: "Trabalhos — Lucas Miranda" },
+      { property: "og:title", content: "Trabalhos" },
       { property: "og:description", content: "Grade completa de projetos publicados no portfólio." },
       { property: "og:url", content: "/trabalhos" },
     ],
@@ -38,7 +38,7 @@ function Trabalhos() {
   return (
     <div className="px-6 md:px-10 py-24 md:py-32">
       <div className="mx-auto max-w-[1400px]">
-        <p className="section-label">[ 01 / Trabalhos ]</p>
+        <p className="section-label">[ Trabalhos ]</p>
         <h1 className="font-display text-6xl md:text-8xl mt-4">Portfólio</h1>
         <p className="mt-6 text-lg text-muted-foreground max-w-2xl">
           Uma seleção de projetos publicados. Filtre por categoria para navegar mais rápido.
